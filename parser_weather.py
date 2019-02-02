@@ -96,3 +96,7 @@ def string_weather(weather):
 Давление: {pressure} мм рт. ст.
 """
     return data
+
+
+if __name__ == '__main__':
+    print(string_weather(get_weather('samara')))
