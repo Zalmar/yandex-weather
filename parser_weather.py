@@ -1,4 +1,5 @@
 from time import sleep
+import datetime
 
 import requests
 
@@ -19,20 +20,28 @@ def get_weather(city):
         if r.status_code == 200:
             soup = BeautifulSoup(r.content, 'lxml')
             try:
+                date = str(datetime.datetime.now().date())
+                weather['date'] = date
                 divs = soup.find_all('dd', attrs={'class': 'term__value'})
+                weather['time'] = soup.find('time', attrs={'class': 'time fact__time'}).text[-5:]
                 weather['city'] = city
                 weather['temp'] = soup.find('span', attrs={'class': 'temp__value'}).text
-                weather['time'] = soup.find('time', attrs={'class': 'time fact__time'}).text
                 weather['condition'] = soup.find('div', attrs={'class': 'link__condition day-anchor i-bem'}).text
                 weather['real_temp'] = soup.find('dl', attrs={'class': 'term term_orient_h fact__feels-like'}).text
                 weather['yesterday_temp'] = soup.find('dl', attrs={
                     'term term_orient_h term_size_wide fact__yesterday'}).text
                 weather['wind_speed'] = divs[2].text
-                weather['wind_direction'] = soup.find('abbr').text
+                if weather['wind_speed'] == 'Штиль':
+                    weather['wind_speed'] = 0.0
+                    weather['wind_direction'] = 'Штиль'
+                else:
+                    weather['wind_direction'] = soup.find('abbr').text
+
                 weather['humidity'] = divs[3].text
                 weather['pressure'] = divs[4].text
                 break
-            except AttributeError:
+            except AttributeError as e:
+                print(e)
                 sleep(1)
                 continue
         else:
@@ -40,30 +49,31 @@ def get_weather(city):
             break
 
     weather['city'] = weather['city'].capitalize()
-    weather['time'] = weather['time'][-5:]
     weather['real_temp'] = int(string_to_integer(weather['real_temp'][13:-1]))
     weather['temp'] = int(string_to_integer(weather['temp']))
     weather['yesterday_temp'] = int(string_to_integer(weather['yesterday_temp'][17:-1]))
-    weather['wind_speed'] = float(string_to_integer(weather['wind_speed'][:(weather['wind_speed'].find('м/с')-1)])
-                                  .replace(',', '.'))
+    if weather['wind_speed'] != 0:
+        weather['wind_speed'] = float(string_to_integer(weather['wind_speed'][:(weather['wind_speed'].find('м/с')-1)])
+                                      .replace(',', '.'))
+        if weather['wind_direction'] == 'В':
+            weather['wind_direction'] = 'Восточный'
+        elif weather['wind_direction'] == 'С':
+            weather['wind_direction'] = 'Северный'
+        elif weather['wind_direction'] == 'Ю':
+            weather['wind_direction'] = 'Южный'
+        elif weather['wind_direction'] == 'З':
+            weather['wind_direction'] = 'Западный'
+        elif weather['wind_direction'] == 'ЮВ':
+            weather['wind_direction'] = 'Юго-восточный'
+        elif weather['wind_direction'] == 'ЮЗ':
+            weather['wind_direction'] = 'Юго-западный'
+        elif weather['wind_direction'] == 'СЗ':
+            weather['wind_direction'] = 'Северо-западный'
+        elif weather['wind_direction'] == 'СВ':
+            weather['wind_direction'] = 'Северо-восточный'
+
     weather['humidity'] = int(weather['humidity'][:-1])
-    weather['pressure'] = int(string_to_integer(weather['pressure'][:(weather['pressure'].find('м')-1)]))
-    if weather['wind_direction'] == 'В':
-        weather['wind_direction'] = 'Восточный'
-    elif weather['wind_direction'] == 'С':
-        weather['wind_direction'] = 'Северный'
-    elif weather['wind_direction'] == 'Ю':
-        weather['wind_direction'] = 'Южный'
-    elif weather['wind_direction'] == 'З':
-        weather['wind_direction'] = 'Западный'
-    elif weather['wind_direction'] == 'ЮВ':
-        weather['wind_direction'] = 'Юго-восточный'
-    elif weather['wind_direction'] == 'ЮЗ':
-        weather['wind_direction'] = 'Юго-западный'
-    elif weather['wind_direction'] == 'СЗ':
-        weather['wind_direction'] = 'Северо-западный'
-    elif weather['wind_direction'] == 'СВ':
-        weather['wind_direction'] = 'Северо-восточный'
+    weather['pressure'] = int(string_to_integer(weather['pressure'][:(weather['pressure'].find('м') - 1)]))
     return weather
 
 
@@ -101,4 +111,6 @@ def string_weather(weather):
 
 
 if __name__ == '__main__':
-    print(string_weather(get_weather('samara')))
+    weather = get_weather('novokuibishevsk')
+    print(weather)
+    print(string_weather(weather))
